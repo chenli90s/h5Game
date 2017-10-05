@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .con {
+            width: 460px;
+            height: 600px;
+            border: 1px solid gray;
+            margin: 50px auto;
+        }
+
+        .sc-con {
+            position: fixed;
+            top: 10%;
+            left: 5%;
+            font-size: 20px;
+            color: green;
+            width: 302px;
+        }
+        .sc-con #btn{
+            float: right;
+        }
+        #setting{
+            width: 300px;
+            border: 1px solid gray;
+        }
+        #setting:after{
+            content: "";
+            display: table;
+            clear: both;
+        }
+        #setting span{
+            float: left;
+        }
+        #setting input{
+            float: right;
+        }
+    </style>
+    <script>
+        log = console.log
+        window.onload = () => {
+            let elbackColor = document.getElementById('backColor')
+            let elmos = document.getElementById('mos')
+            let elmosColor = document.getElementById('mosColor')
+            let elmosSpeed = document.getElementById('mosSpeed')
+            let elgSpeed = document.getElementById('gSpeed')
+            let elvSpeed = document.getElementById('vSpeed')
+
+            let params = {
+                backColor: elbackColor.value,
+                mos: parseFloat(elmos.value),
+                mosColor: elmosColor.value,
+                mosSpeed: parseFloat(elmosSpeed.value),
+                gSpeed: parseFloat(elgSpeed.value),
+                vSpeed: parseFloat(elvSpeed.value),
+            }
+
+            let canvas = document.getElementById('cvs')
+            canvas.width = 460
+            canvas.height = 600
+            canvas.style.backgroundColor = params.backColor
+            let _cvs = canvas.getContext('2d')
+
+            let buffcanvas = document.createElement('canvas')
+            buffcanvas.width = 460
+            buffcanvas.height = 600
+            let cvs = buffcanvas.getContext('2d')
+
+            let isover = false
+            let intervalTime = 10
+            let score = 0
+            let elscore = document.getElementById('score')
+            elscore.innerHTML = score + "分"
+
+            let gameenger
+
+            class Kos {
+                constructor() {
+                    this.offset = canvas.width
+                    this.width = 30
+                    this.curHeight = (Math.random() * canvas.height / 3) + canvas.height / 4
+                    this.mos = params.mos + Math.random() * 50
+                }
+
+                topRect() {
+                    cvs.save()
+                    cvs.fillStyle = params.mosColor
+                    // log(this.offset, this.width, this.curHeight)
+                    cvs.fillRect(this.offset, 0, this.width, this.curHeight)
+                    cvs.restore()
+                }
+                bottomRect() {
+                    cvs.save()
+                    cvs.fillStyle = params.mosColor
+                    // log(this.curHeight + this.mos, canvas.height - this.curHeight + this.mos)
+                    cvs.fillRect(this.offset, this.curHeight + this.mos, this.width, canvas.height - this.curHeight + this.mos)
+                    cvs.restore()
+                }
+                moving() {
+                    // this.offset -= intervalTime / 10
+                    this.offset -= params.mosSpeed
+                    this.topRect()
+                    this.bottomRect()
+                }
+            }
+
+            class Fly {
+                constructor() {
+                    this.x = 50
+                    this.y = 50
+                    this.pos = 0
+                    this.g = 2
+                    this.v = params.vSpeed
+                }
+                setPosition() {
+                    // log(this.pos, this.y)
+                    cvs.save()
+                    let image = new Image()
+                    image.src = './plane.png'
+                    image.onload = () => {
+                        cvs.drawImage(image, this.x, this.y)
+                    }
+                    cvs.restore()
+                }
+                //1/2(9.8)t
+                moving() {
+                    // this.pos += intervalTime / 200
+                    this.pos += params.gSpeed
+                    this.y = this.pos * Math.abs(this.pos) / this.g + this.y
+                    // log(this.pos, this.x, this.y)
+                    this.setPosition()
+                }
+                up() {
+                    this.pos = -this.v / intervalTime
+                }
+            }
+
+            let fly = new Fly()
+            let koss = []
+            koss.push(new Kos())
+
+            function draw() {
+                // log('clear')
+                _cvs.clearRect(0, 0, canvas.width, canvas.height)
+                fly.moving()
+                koss.forEach((kos, index) => {
+                    let num = 35
+                    if(params.mosSpeed%2==0){
+                        num = 34
+                    }
+                    // log(params.mosSpeed%2, num)
+                    if (kos.offset < 80) {
+                        if (kos.offset < 80 && kos.offset > 35) {
+                            if (fly.y < kos.curHeight) {
+                                isover = true
+                            } else if (fly.y > (kos.curHeight + kos.mos - 30)) {
+                                isover = true
+                            }
+                        } else if (kos.offset == num) {
+                            score++
+                            elscore.innerHTML = score + '分'
+                            // log(score)
+                            // }else if(kos.offset<-30){
+                            //     log(index)
+                            //     koss.splice(0,1)
+                        }
+
+                    }
+                    kos.moving()
+                })
+                _cvs.drawImage(buffcanvas, 0, 0)
+                cvs.clearRect(0, 0, canvas.width, canvas.height)
+            }
+
+            function overImg() {
+                fly = null
+                koss = []
+                // koss.push(new Kos())
+                document.onkeydown = null
+                _cvs.clearRect(0, 0, canvas.width, canvas.height)
+                _cvs.font = '50px Microsoft YaHei'
+                _cvs.textAlign = 'center'
+                _cvs.textBaseline = 'middle'
+                let gradient = _cvs.createLinearGradient(0, 0, canvas.width, 0);
+                gradient.addColorStop("0", "magenta");
+                gradient.addColorStop("0.5", "red");
+                gradient.addColorStop("0.7", "green");
+                _cvs.fillStyle = gradient
+                _cvs.fillText('Game Over', 230, 300)
+                _cvs.fillText('得分:'+score, 230, 380)                
+                clearInterval(gameenger)
+                elscore.innerHTML = 0 + "分"
+            }
+
+            function startGame() {
+
+                fly = new Fly()
+                koss = []
+                koss.push(new Kos())
+                score = 0
+                isover = false
+
+                let createKos = setInterval(function () {
+                    koss.push(new Kos)
+                }, 3000/params.mosSpeed)
+
+
+                gameenger = setInterval(function () {
+                    if (isover || fly.y > canvas.height) {
+                        clearInterval(createKos)
+                        overImg()
+                    } else {
+                        draw()
+                    }
+
+                }, intervalTime)
+
+                document.onkeydown = (event) => {
+                    // log(event.keyCode)
+                    switch (event.keyCode) {
+                        case 32:
+                            fly.up()
+                            break;
+                        default:
+                            break;
+                    }
+                    return false
+                }
+
+            }
+
+            let btn = document.getElementById('btn')
+            btn.onclick = () => {
+                startGame()
+            }
+
+
+            let confirm = document.getElementById('confirm')
+            confirm.onclick = () => {
+                params = {
+                    backColor: elbackColor.value,
+                    mos: parseFloat(elmos.value),
+                    mosColor: elmosColor.value,
+                    mosSpeed: parseFloat(elmosSpeed.value),
+                    gSpeed: parseFloat(elgSpeed.value),
+                    vSpeed: parseFloat(elvSpeed.value),
+                }
+                canvas.style.backgroundColor = params.backColor
+                startGame()
+            }
+
+            // (function animateFrame(){
+            //     window.requestAnimationFrame(animateFrame, canvas)
+            //     cvs.fillStyle = 'rgba(255,255,255,0.1)'
+            //     cvs.fillRect(0, 0, canvas.width, canvas.height)
+
+            //     draw()
+            // }())
+
+
+
+
+        }
+    </script>
+</head>
+
+<body>
+    <div class="con">
+        <canvas id="cvs"></canvas>
+    </div>
+    <div class="sc-con">
+        <span>得分 : &nbsp;&nbsp;&nbsp;&nbsp;</span><span id="score"></span>
+        <button id="btn">开始</button>
+        <div id="setting">
+            <span>背景颜色:</span><input type="text" id="backColor" value="#b6c3b6"><br>
+            <span>洞口大小:</span><input type="text" id="mos" value="100"><br>
+            <span>管子颜色:</span><input type="text" id="mosColor" value="#0ca933"><br>
+            <span>管子移动速度:</span><input type="text" id="mosSpeed" value="1"><br>
+            <span>重力加速度:</span><input type="text" id="gSpeed" value="0.05"><br>
+            <span>上升初速度</span><input type="text" id="vSpeed" value="30"><br>
+            <input type="button" id="confirm" value="设置">
+        </div>
+    </div>
+</body>
+
+</html>
